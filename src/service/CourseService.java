@@ -9,47 +9,73 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 public class CourseService {
-    Scanner scanner = new Scanner(System.in);
+   private List<Course> courses = new ArrayList<>(); // Danh sách các khóa học
 
-    public void add(String courseId) {
-        String courseName = Utils.getProperName("Enter course name: ");
-        String description = Utils.getString("Enter description: ", scanner);
-        String startDate = Utils.getValidDate("Enter start date: ");
-        String endDate = Utils.getValidDate("Enter end date: ");
-        int duration = Utils.calculateDuration(startDate, endDate);
-        try {
-            Connection conn = DriverManager.getConnection(JDBC.DB_URL, JDBC.DB_USERNAME, JDBC.DB_PASSWORD);
-            PreparedStatement prep = conn.prepareStatement("INSERT INTO tblCourse VALUES (?, ?, ?, ?, ?, ?, ?)");
-            prep.setString(1, autoGenerateCourseID(conn));
-            prep.setString(2, courseName);
-            prep.setString(3, description);
-            prep.setInt(4, duration);
-            prep.setString(5, startDate);
-            prep.setString(6, endDate);
-            prep.setString(7, courseId);
-            prep.executeUpdate();
-            System.out.println("Course added");
-        } catch (Exception e) {
-            e.printStackTrace();
+    public void addCourse() {
+        String courseName = Utils.getString("Enter Course Name", Utils.input);
+        String description = Utils.getString("Enter Course Description", Utils.input);
+        
+        LocalTime duration = LocalTime.parse(Utils.getString("Enter Course Duration (HH:mm)", Utils.input));
+
+        Course newCourse = new Course(courseID, courseName, description, null, null, duration);
+        courses.add(newCourse);
+        System.out.println("Course added successfully!");
+    }
+
+    public void showCourses() {
+        if (courses.isEmpty()) {
+            System.out.println("No courses available.");
+        } else {
+            System.out.println("List of Courses:");
+            for (Course course : courses) {
+                System.out.println(course.toString()); 
+            }
         }
     }
 
-    public void update(Course course) throws ClassNotFoundException {
-        System.out.println("Course updated");
+    public Course findCourseByID(String courseID) {
+        for (Course course : courses) {
+            if (course.getCourseID().equals(courseID)) {
+                return course;
+            }
+        }
+        return null; 
     }
 
-
-    public void delete(Course course) {
-        System.out.println("Course deleted");
+    public void deleteCourse(String courseID) {
+        Course course = findCourseByID(courseID);
+        if (course != null) {
+            courses.remove(course);
+            System.out.println("Course removed successfully!");
+        } else {
+            System.out.println("Course not found.");
+        }
     }
 
-
-    public void display() {
-        ArrayList<String> courseList = new ArrayList<>();
-        System.out.printf("%-10s %-15s %-15s %-25s %-15s %-10s %-10s%n" , "CourseID", "Course Name", "Description", "Duration", "Start Date", "End Date", "Coach ID");
-        System.out.println("--------------------------------------------------------------------------------------");
-        for (int i = 0; i < courseList.size(); i += 5) {
-            System.out.printf("%-10s %-15s %-15s %-25s %-15s %-10s %-10s%n", courseList.get(i), courseList.get(i + 1), courseList.get(i + 2), courseList.get(i + 3), courseList.get(i + 4), courseList.get(i + 5), courseList.get(i + 6));
+    public void updateCourse(String courseID) {
+        Course course = findCourseByID(courseID);
+        if (course != null) {
+            String fieldName = Utils.getString("Enter field name to update (courseName, description, duration)", Utils.input);
+            String newValue = Utils.getString("Enter new value", Utils.input);
+            try {
+                Field field = Course.class.getDeclaredField(fieldName);
+                field.setAccessible(true); 
+                if (field.getType() == String.class) {
+                    field.set(course, newValue); 
+                } else if (field.getType() == LocalTime.class) {
+                    LocalTime newDuration = LocalTime.parse(newValue); 
+                    field.set(course, newDuration);
+                }
+                System.out.println("Course updated successfully!");
+            } catch (NoSuchFieldException e) {
+                System.out.println("Field not found.");
+            } catch (IllegalAccessException e) {
+                System.out.println("Cannot access field.");
+            } catch (Exception e) {
+                System.out.println("Error updating field: " + e.getMessage());
+            }
+        } else {
+            System.out.println("Course not found.");
         }
     }
 
